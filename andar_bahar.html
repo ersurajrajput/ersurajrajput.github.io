@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Andar Bahar Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #fbc2eb, #a6c1ee);
+            text-align: center;
+            padding: 30px;
+        }
+
+        .card {
+            width: 80px;
+            height: 120px;
+            border: 2px solid #000;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            margin: 5px 0;
+            opacity: 0;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #2196f3;
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        .button:hover {
+            background-color: #1769aa;
+        }
+
+        .button.selected {
+            background-color: #4caf50 !important;
+            /* green */
+            cursor: default;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+        }
+
+        .pile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 140px;
+            border: 1px solid #aaa;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+
+        .result {
+            font-size: 22px;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .title-card {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        #center-card {
+            margin: 0 auto;
+            margin-bottom: 15px;
+        }
+
+        #play-again {
+            display: none;
+            margin-top: 20px;
+            font-size: 18px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #cards-shown {
+            font-size: 20px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2 class="title-card">Your Card is: <span id="main-card"></span></h2>
+    <div id="cards-shown">Cards Shown: 0</div>
+    <div class="card" id="center-card">?</div>
+
+    <div class="container">
+        <div>
+            <button id="andar-btn" class="button" onclick="playGame('Andar')">Andar</button>
+            <div id="anadar-pile" class="pile"></div>
+        </div>
+        <div>
+            <button id="bahar-btn" class="button" onclick="playGame('Bahar')">Bahar</button>
+            <div id="bahar-pile" class="pile"></div>
+        </div>
+    </div>
+
+    <div class="result" id="result"></div>
+
+    <button id="play-again" onclick="resetGame()">🔁 Play Again</button>
+
+    <script>
+        const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        const suits = ['♠', '♥', '♣', '♦'];
+
+        let mainCard;
+        let interval;
+
+        const andarBtn = document.getElementById('andar-btn');
+        const baharBtn = document.getElementById('bahar-btn');
+        const anadarPile = document.getElementById('anadar-pile');
+        const baharPile = document.getElementById('bahar-pile');
+        const cardsShownEl = document.getElementById('cards-shown');
+
+        function playPageFlipSound() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AudioContext();
+
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(800, ctx.currentTime);
+
+                gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+
+                oscillator.start();
+                oscillator.stop(ctx.currentTime + 0.2);
+
+                oscillator.onended = () => {
+                    ctx.close();
+                };
+            } catch (e) { }
+        }
+
+        function getRandomCard() {
+            const rank = ranks[Math.floor(Math.random() * ranks.length)];
+            const suit = suits[Math.floor(Math.random() * suits.length)];
+            return { rank, suit, display: rank + suit };
+        }
+
+        function resetMainCard() {
+            mainCard = getRandomCard();
+            document.getElementById('main-card').textContent = mainCard.display;
+            document.getElementById('center-card').textContent = mainCard.display;
+            cardsShownEl.textContent = "Cards Shown: 0";
+        }
+
+        function resetGame() {
+            clearInterval(interval);
+            anadarPile.innerHTML = '';
+            baharPile.innerHTML = '';
+            document.getElementById('result').textContent = '';
+            document.getElementById('play-again').style.display = 'none';
+            cardsShownEl.textContent = "Cards Shown: 0";
+            resetMainCard();
+
+            andarBtn.classList.remove('selected');
+            baharBtn.classList.remove('selected');
+            andarBtn.disabled = false;
+            baharBtn.disabled = false;
+        }
+
+        function playGame(userChoice) {
+            resetGame();
+
+            if (userChoice === 'Andar') {
+                andarBtn.classList.add('selected');
+                baharBtn.classList.remove('selected');
+            } else {
+                baharBtn.classList.add('selected');
+                andarBtn.classList.remove('selected');
+            }
+
+            andarBtn.disabled = true;
+            baharBtn.disabled = true;
+
+            let round = 0;
+            let matchFound = false;
+
+            interval = setInterval(() => {
+                let card;
+                const isEvenRound = (round % 2 === 0);
+
+                if (isEvenRound) {
+                    // For the even rounds, show card on Andar pile
+                    // If it is the matching card, only show if userChoice !== 'Andar'
+                    if (userChoice === 'Andar') {
+                        // User chose Andar, so if card is matching card, don't show it on Andar pile,
+                        // instead generate a different card
+                        do {
+                            card = getRandomCard();
+                        } while (card.rank === mainCard.rank);
+                    } else {
+                        // user chose Bahar, can show matching card here
+                        card = getRandomCard();
+                    }
+
+                    if (anadarPile.firstChild) anadarPile.removeChild(anadarPile.firstChild);
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'card';
+                    cardDiv.textContent = card.display;
+                    anadarPile.appendChild(cardDiv);
+                } else {
+                    // Odd rounds show on Bahar pile
+                    // If matching card, only show if userChoice !== 'Bahar'
+                    if (userChoice === 'Bahar') {
+                        // User chose Bahar, so if card is matching card, don't show on Bahar pile,
+                        // instead generate a different card
+                        do {
+                            card = getRandomCard();
+                        } while (card.rank === mainCard.rank);
+                    } else {
+                        // user chose Andar, can show matching card here
+                        card = getRandomCard();
+                    }
+
+                    if (baharPile.firstChild) baharPile.removeChild(baharPile.firstChild);
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'card';
+                    cardDiv.textContent = card.display;
+                    baharPile.appendChild(cardDiv);
+                }
+
+                round++;
+                cardsShownEl.textContent = `Cards Shown: ${round}`;
+
+                playPageFlipSound();
+
+                // Check if the shown card is the losing card (same rank as main card)
+                // Only if it appeared on the opposite pile of user choice
+                // Because matching card only appears on opposite side, this logic covers that
+                if (card.rank === mainCard.rank) {
+                    clearInterval(interval);
+                    matchFound = true;
+                    document.getElementById('result').textContent = "❌ You Lose!";
+                    document.getElementById('play-again').style.display = 'inline-block';
+
+                    andarBtn.disabled = false;
+                    baharBtn.disabled = false;
+                }
+
+                if (round > 52 && !matchFound) {
+                    clearInterval(interval);
+                    document.getElementById('result').textContent = "😕 No match found!";
+                    document.getElementById('play-again').style.display = 'inline-block';
+
+                    andarBtn.disabled = false;
+                    baharBtn.disabled = false;
+                }
+            }, 500);
+        }
+
+        resetMainCard();
+    </script>
+
+</body>
+
+</html>
